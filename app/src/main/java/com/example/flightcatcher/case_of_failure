@@ -1,0 +1,139 @@
+package com.example.flightcatcher
+
+import android.os.Bundle
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.Preview
+import com.example.flightcatcher.ui.theme.FlightcatcherTheme
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
+import android.util.Log
+import com.google.android.gms.location.FusedLocationProviderClient
+import com.google.android.gms.location.LocationServices
+import android.location.*
+import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
+
+
+
+
+class MainActivity : ComponentActivity() {
+
+    private val LOCATION_PERMISSION_REQUEST_CODE = 1001
+
+    private val flights = listOf<Location>()  // We'll fill this later
+    private lateinit var locationManager: LocationManager
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_main)
+
+        locationManager = getSystemService(LOCATION_SERVICE) as LocationManager
+
+        if (hasLocationPermission()) {
+            startLocationUpdates()
+        } else {
+            requestLocationPermission()
+        }
+    }
+
+    private fun startLocationUpdates() {
+        locationManager.requestLocationUpdates(
+            LocationManager.GPS_PROVIDER,
+            5000L,
+            10f,
+            locationListener
+        )
+    }
+    private val locationListener = object : LocationListener {
+        override fun onLocationChanged(location: Location) {
+            Log.d(
+                "FlightCatcher",
+                "Lat=${location.latitude}, Lon=${location.longitude}"
+            )
+            for (flight in flights) {
+                val distance = location.distanceTo(flight)
+                if (distance <= 5000) {
+                    Log.d("FlightCatcher", "🚨 Flight within 5 km!")
+                    Toast.makeText(this@MainActivity, "Flight nearby!", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+    private fun hasLocationPermission(): Boolean {
+        return ContextCompat.checkSelfPermission(
+            this,
+            Manifest.permission.ACCESS_FINE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
+    }
+    private fun requestLocationPermission() {
+        ActivityCompat.requestPermissions(
+            this,
+            arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
+            LOCATION_PERMISSION_REQUEST_CODE
+        )
+    }
+
+    // -------------------------
+    // USER RESPONSE HANDLER
+    // -------------------------
+    private val requestPermissionLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted: Boolean ->
+            if (isGranted) {
+                startLocationUpdates()
+            } else {
+                Toast.makeText(this, "Location permission denied!", Toast.LENGTH_SHORT).show()
+            }
+        }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+            == PackageManager.PERMISSION_GRANTED) {
+            startLocationUpdates()
+        } else {
+            requestPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+        }
+
+
+        if (requestCode == LOCATION_PERMISSION_REQUEST_CODE) {
+            if (grantResults.isNotEmpty() &&
+                grantResults[0] == PackageManager.PERMISSION_GRANTED
+            ) {
+                startLocationUpdates()
+            } else {
+                Log.e("FlightCatcher", "Location permission denied")
+            }
+        }
+    }
+
+
+}
+
+@Composable
+fun Greeting(name: String, modifier: Modifier = Modifier) {
+    Text(
+        text = "Hello $name!",
+        modifier = modifier
+    )
+}
+
+@Preview(showBackground = true)
+@Composable
+fun GreetingPreview() {
+    FlightcatcherTheme {
+        Greeting("Android")
+    }
+}
