@@ -6,35 +6,21 @@
     android:layout_height="match_parent">
 
     <TextView
-        android:id="@+id/statusText"
+        android:id="@+id/latitudeTextView"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="FlightCatcher active"
+        android:text="Lat: --"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        android:layout_marginTop="32dp"/>
+        android:layout_margin="16dp"/>
 
     <TextView
-        android:id="@+id/tvLatitude"
+        android:id="@+id/longitudeTextView"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Latitude: --"
-        android:textSize="18sp"
-        android:layout_marginTop="32dp"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintStart_toStartOf="parent" />
-
-    <TextView
-        android:id="@+id/tvLongitude"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Longitude: --"
-        android:textSize="18sp"
-        android:layout_marginTop="16dp"
-        app:layout_constraintTop_toBottomOf="@id/tvLatitude"
-        app:layout_constraintStart_toStartOf="parent" />
-
-
+        android:text="Lon: --"
+        app:layout_constraintTop_toBottomOf="@id/latitudeTextView"
+        app:layout_constraintStart_toStartOf="parent"
+        android:layout_margin="16dp"/>
 
 </androidx.constraintlayout.widget.ConstraintLayout>
