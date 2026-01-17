@@ -63,4 +63,4 @@ This ensures:
 
 ### Clone the repository
 ```bash
-git clone https://github.com/<your-username>/FlightCatcher.git
+git clone https://github.com/prabudhap/FlightCatcher.git
