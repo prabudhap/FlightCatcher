@@ -17,6 +17,7 @@ import com.google.android.gms.location.Priority
 import com.google.android.gms.location.LocationResult
 import android.os.Looper
 import com.example.flightcatcher.databinding.ActivityMainBinding
+import com.example.flightcatcher.utils.LocationUtils
 
 
 
@@ -66,7 +67,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-        Toast.makeText(this, "FlightCatcher started", Toast.LENGTH_SHORT).show()
+
         // Initialize binding
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
