@@ -1,38 +1,66 @@
-# FlightCatcher
-FlightCatcher ✈️
+# FlightCatcher ✈️
 
-A Kotlin-based Android app that monitors flights in real-time and notifies you when a flight comes within a 5 km radius of your location. Designed to work on both LineageOS (no Google Services) and standard Android devices with Google Play Services.
+FlightCatcher is a Kotlin-based Android application that tracks your real-time location and notifies you when an aircraft passes within a **5 km radius** of your position.
 
-Features
+The app is designed to work on **both Google-enabled Android devices and Google-free ROMs like LineageOS**, using a flexible location strategy.
 
-Dual-mode location tracking:
+---
 
-GPS + last known location (for LineageOS / Google-free devices)
+## 🔍 What Problem This Solves
 
-Fused Location + GPS + last known location (for standard Android)
+Most flight-tracking apps:
+- Require Google Play Services
+- Stop working reliably in the background
+- Do not provide proximity-based alerts
 
-Real-time flight proximity detection (5 km radius).
+FlightCatcher focuses on **location-based flight proximity detection**, even when:
+- The screen is off
+- The device is running LineageOS or de-Googled Android
+- Location updates need to work continuously
 
-Pop-up notifications when a nearby flight is detected.
+---
 
-Handles runtime location permissions dynamically.
+## 🚀 Features
 
-Optimized for battery efficiency with proper lifecycle management.
+- 📍 Real-time latitude & longitude updates
+- 🔄 Dual location provider strategy:
+  - **GPS + Last Known Location** (LineageOS / Google-free devices)
+  - **Fused Location + GPS + Last Known Location** (Standard Android)
+- 📡 Continuous location monitoring
+- 🔔 Popup notification when a flight enters a 5 km radius
+- 🔐 Runtime permission handling
+- ⚡ Lifecycle-aware location updates
 
-Future Plans
+---
 
-Move location tracking to a foreground service to work reliably in the background.
+## 🧠 Location Strategy
 
-Integrate FlightRadar24 or other flight APIs to get live flight data.
+| Device Type | Location Method |
+|------------|-----------------|
+| LineageOS / No GMS | GPS_PROVIDER + Last Known Location |
+| Standard Android | Fused Location Provider + GPS fallback |
 
-Add user settings to customize detection radius and notification preferences.
+This ensures:
+- Compatibility across ROMs
+- Faster first location fix
+- Graceful fallback when providers are unavailable
 
-Technologies
+---
 
-Kotlin
+## 🛠 Tech Stack
 
-Android SDK
+- **Language:** Kotlin
+- **Platform:** Android SDK
+- **Location APIs:**
+  - `LocationManager` (GPS)
+  - `FusedLocationProviderClient` (Google Play Services)
+- **Architecture:** Activity-based (service planned)
+- **Target Devices:** Android phones, LineageOS devices
 
-Google Play Services (Fused Location Provider)
+---
 
-LineageOS-compatible GPS tracking
+## 📦 Installation
+
+### Clone the repository
+```bash
+git clone https://github.com/prabudhap/FlightCatcher.git
