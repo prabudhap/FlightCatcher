@@ -18,11 +18,10 @@ import com.google.android.gms.location.LocationResult
 import android.os.Looper
 import com.example.flightcatcher.databinding.ActivityMainBinding
 import com.example.flightcatcher.utils.LocationUtils
-
-
-
-
-
+import com.example.flightcatcher.utils.NotificationUtils
+import com.example.flightcatcher.viewmodel.FlightViewModel
+import androidx.lifecycle.ViewModelProvider
+import com.example.flightcatcher.model.FlightModel
 
 
 class MainActivity : ComponentActivity() {
@@ -36,6 +35,11 @@ class MainActivity : ComponentActivity() {
     private lateinit var longitudeTextView: TextView
     private lateinit var fusedClient: FusedLocationProviderClient
     private lateinit var binding: ActivityMainBinding
+    private lateinit var flightViewModel: FlightViewModel
+    private val flightList = mutableListOf<FlightModel>()
+
+
+
 
 
 
@@ -72,6 +76,7 @@ class MainActivity : ComponentActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
         fusedClient = LocationServices.getFusedLocationProviderClient(this)
+        flightViewModel = ViewModelProvider(this)[FlightViewModel::class.java]
 
 
 
@@ -131,18 +136,45 @@ class MainActivity : ComponentActivity() {
         requestPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
     }
 
-    private val fusedCallback = object : LocationCallback() {
-        override fun onLocationResult(locationResult: LocationResult) {
-            val location = locationResult.lastLocation ?: return
+    private val locationCallback = object : LocationCallback() {
+        override fun onLocationResult(result: LocationResult) {
+            val location = result.lastLocation ?: return
 
-            Log.d("FlightCatcher", "Fused Lat=${location.latitude}, Lon=${location.longitude}")
+            val currentLat = location.latitude
+            val currentLon = location.longitude
 
-            for (flight in flights) {
-                val distance = location.distanceTo(flight)
-                if (distance <= 5000) {
-                    Toast.makeText(this@MainActivity, "Flight nearby!", Toast.LENGTH_SHORT).show()
-                }
+            // 🔥 PERFECT SPOT 🔥
+            flightViewModel.detectNearbyFlights(
+                userLat = currentLat,
+                userLon = currentLon,
+                flights = flightList
+            ) { flight ->
+                NotificationUtils.showFlightNotification(this@MainActivity, flight)
             }
+        }
+    }
+
+    private fun handleNearbyFlights(location: Location) {
+        flightViewModel.detectNearbyFlights(
+            userLat = location.latitude,
+            userLon = location.longitude,
+            flights = flightList
+        ) { flight ->
+            NotificationUtils.showFlightNotification(this, flight)
+        }
+    }
+
+    private val fusedCallback = object : LocationCallback() {
+        override fun onLocationResult(result: LocationResult) {
+            val location = result.lastLocation ?: return
+
+            val lat = location.latitude
+            val lon = location.longitude
+
+            Log.d("FlightCatcher", "FUSED → Lat=$lat, Lon=$lon")
+
+            updateUI(location)
+            handleNearbyFlights(location)
         }
     }
 
@@ -213,30 +245,18 @@ class MainActivity : ComponentActivity() {
     private val locationListener = object : LocationListener {
 
         override fun onLocationChanged(location: Location) {
+            val currentLat = location.latitude
+            val currentLon = location.longitude
 
-            for (flight in flights) {
-                val distance = location.distanceTo(flight)
+            // 🔥 THIS IS THE RIGHT PLACE 🔥
+            flightViewModel.detectNearbyFlights(
+                userLat = currentLat,
+                userLon = currentLon,
+                flights = flightList
+            ) { flight ->
+                NotificationUtils.showFlightNotification(this@MainActivity, flight)
 
-                if (distance <= 5000 && !alertShown) {
-                    alertShown = true
-
-                    Toast.makeText(
-                        this@MainActivity,
-                        "✈ Flight within 5 km",
-                        Toast.LENGTH_SHORT
-                    ).show()
-
-                    Log.d("FlightCatcher", "Flight alert triggered at $distance m")
-                }
-
-                // Reset when user moves away
-                if (distance > 6000) {
-                    alertShown = false
-                }
-
-                lastDistance = distance
             }
-
         }
 
     }

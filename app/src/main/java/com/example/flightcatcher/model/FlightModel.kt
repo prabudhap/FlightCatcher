@@ -3,10 +3,12 @@ package com.example.flightcatcher.model
 import com.example.flightcatcher.utils.LocationUtils
 
 data class FlightModel(
+    val id: String,
     val flightNumber: String,
     val latitude: Double,
     val longitude: Double,
-    val altitude: Int? = null
+    val altitude: Int? = null,
+    val callsign: String? = null
 ) {
 
     fun distanceFrom(

@@ -6,22 +6,43 @@ import com.example.flightcatcher.utils.GeoUtils
 
 class FlightViewModel : ViewModel() {
 
+    // Flights that have already triggered notification
+    private val activeFlightsInRadius = mutableSetOf<String>()
+
     /**
-     * Returns flights within 5 km radius of user location
+     * WhatsApp-style proximity detection
+     *
+     * - Notifies ONLY when flight ENTERS radius
+     * - No repeated notifications
+     * - Re-notifies if flight exits and re-enters
      */
-    fun getNearbyFlights(
+    fun detectNearbyFlights(
         userLat: Double,
         userLon: Double,
-        flights: List<FlightModel>
-    ): List<FlightModel> {
+        flights: List<FlightModel>,
+        onFlightEntered: (FlightModel) -> Unit
+    ) {
+        flights.forEach { flight ->
 
-        return flights.filter { flight ->
-            GeoUtils.isFlightWithin5Km(
+            val isInsideRadius = GeoUtils.isFlightWithin5Km(
                 userLat = userLat,
                 userLon = userLon,
                 flight = flight,
                 radiusKm = 5.0
             )
+
+            val flightId = flight.id
+
+            // ENTRY event → notify ONCE
+            if (isInsideRadius && !activeFlightsInRadius.contains(flightId)) {
+                activeFlightsInRadius.add(flightId)
+                onFlightEntered(flight)
+            }
+
+            // EXIT event → reset
+            if (!isInsideRadius && activeFlightsInRadius.contains(flightId)) {
+                activeFlightsInRadius.remove(flightId)
+            }
         }
     }
 }
