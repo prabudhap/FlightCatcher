@@ -20,7 +20,11 @@ import com.example.flightcatcher.databinding.ActivityMainBinding
 import com.example.flightcatcher.utils.NotificationUtils
 import com.example.flightcatcher.viewmodel.FlightViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
 import com.example.flightcatcher.model.FlightModel
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
 
 
 class MainActivity : ComponentActivity() {
@@ -30,6 +34,9 @@ class MainActivity : ComponentActivity() {
     private lateinit var binding: ActivityMainBinding
     private lateinit var flightViewModel: FlightViewModel
     private val flightList = mutableListOf<FlightModel>()
+    
+    // Flight update interval (30 seconds)
+    private val FLIGHT_UPDATE_INTERVAL_MS = 30_000L
 
 
 
@@ -63,7 +70,11 @@ class MainActivity : ComponentActivity() {
         fusedClient = LocationServices.getFusedLocationProviderClient(this)
         flightViewModel = ViewModelProvider(this)[FlightViewModel::class.java]
 
-
+        // Observe flights from ViewModel
+        observeFlights()
+        
+        // Start fetching flights periodically
+        startFlightUpdates()
 
         locationManager = getSystemService(LOCATION_SERVICE) as LocationManager
         Log.d("FlightCatcher", "GPS enabled = ${locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)}")
@@ -144,6 +155,35 @@ class MainActivity : ComponentActivity() {
 
     private fun requestLocationPermission() {
         requestPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+    }
+    
+    /**
+     * Observe flights from ViewModel and update local list
+     */
+    private fun observeFlights() {
+        lifecycleScope.launch {
+            flightViewModel.flights.collectLatest { flights ->
+                flightList.clear()
+                flightList.addAll(flights)
+                Log.d("FlightCatcher", "Updated flight list: ${flights.size} flights")
+            }
+        }
+    }
+    
+    /**
+     * Start periodic flight updates from API
+     */
+    private fun startFlightUpdates() {
+        // Fetch immediately
+        flightViewModel.fetchFlights()
+        
+        // Then fetch periodically
+        lifecycleScope.launch {
+            while (true) {
+                delay(FLIGHT_UPDATE_INTERVAL_MS)
+                flightViewModel.fetchFlights()
+            }
+        }
     }
 
     private fun handleNearbyFlights(location: Location) {
