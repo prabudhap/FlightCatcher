@@ -1,5 +1,5 @@
 package com.example.flightcatcher
-import android.widget.TextView
+
 import android.Manifest
 import android.content.pm.PackageManager
 import android.location.*
@@ -17,26 +17,26 @@ import com.google.android.gms.location.Priority
 import com.google.android.gms.location.LocationResult
 import android.os.Looper
 import com.example.flightcatcher.databinding.ActivityMainBinding
-import com.example.flightcatcher.utils.LocationUtils
 import com.example.flightcatcher.utils.NotificationUtils
 import com.example.flightcatcher.viewmodel.FlightViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
 import com.example.flightcatcher.model.FlightModel
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
 
 
 class MainActivity : ComponentActivity() {
 
     private lateinit var locationManager: LocationManager
-    private lateinit var tvLatitude: TextView
-    private lateinit var tvLongitude: TextView
-    private var alertShown = false
-    private var lastDistance = Float.MAX_VALUE
-    private lateinit var latitudeTextView: TextView
-    private lateinit var longitudeTextView: TextView
     private lateinit var fusedClient: FusedLocationProviderClient
     private lateinit var binding: ActivityMainBinding
     private lateinit var flightViewModel: FlightViewModel
     private val flightList = mutableListOf<FlightModel>()
+    
+    // Flight update interval (30 seconds)
+    private val FLIGHT_UPDATE_INTERVAL_MS = 30_000L
 
 
 
@@ -60,25 +60,21 @@ class MainActivity : ComponentActivity() {
             android.Manifest.permission.ACCESS_FINE_LOCATION
         ) == PackageManager.PERMISSION_GRANTED
     }
-    // Mock flights for testing
-    private val flights = listOf(
-        Location("").apply { latitude = 12.9716; longitude = 77.5946 }, // Bangalore
-        Location("").apply { latitude = 13.0827; longitude = 80.2707 }  // Chennai
-    )
-
-
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
-
+        
         // Initialize binding
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
         fusedClient = LocationServices.getFusedLocationProviderClient(this)
         flightViewModel = ViewModelProvider(this)[FlightViewModel::class.java]
 
-
+        // Observe flights from ViewModel
+        observeFlights()
+        
+        // Start fetching flights periodically
+        startFlightUpdates()
 
         locationManager = getSystemService(LOCATION_SERVICE) as LocationManager
         Log.d("FlightCatcher", "GPS enabled = ${locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)}")
@@ -127,29 +123,65 @@ class MainActivity : ComponentActivity() {
 
     override fun onPause() {
         super.onPause()
+        stopLocationUpdates()
+    }
+
+    override fun onStop() {
+        super.onStop()
+        stopLocationUpdates()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        stopLocationUpdates()
+    }
+
+    private fun stopLocationUpdates() {
         if (::locationManager.isInitialized) {
-            locationManager.removeUpdates(locationListener)
+            try {
+                locationManager.removeUpdates(locationListener)
+            } catch (e: Exception) {
+                Log.e("FlightCatcher", "Error removing location updates", e)
+            }
+        }
+        if (::fusedClient.isInitialized) {
+            try {
+                fusedClient.removeLocationUpdates(fusedCallback)
+            } catch (e: Exception) {
+                Log.e("FlightCatcher", "Error removing fused location updates", e)
+            }
         }
     }
 
     private fun requestLocationPermission() {
         requestPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
     }
-
-    private val locationCallback = object : LocationCallback() {
-        override fun onLocationResult(result: LocationResult) {
-            val location = result.lastLocation ?: return
-
-            val currentLat = location.latitude
-            val currentLon = location.longitude
-
-            // 🔥 PERFECT SPOT 🔥
-            flightViewModel.detectNearbyFlights(
-                userLat = currentLat,
-                userLon = currentLon,
-                flights = flightList
-            ) { flight ->
-                NotificationUtils.showFlightNotification(this@MainActivity, flight)
+    
+    /**
+     * Observe flights from ViewModel and update local list
+     */
+    private fun observeFlights() {
+        lifecycleScope.launch {
+            flightViewModel.flights.collectLatest { flights ->
+                flightList.clear()
+                flightList.addAll(flights)
+                Log.d("FlightCatcher", "Updated flight list: ${flights.size} flights")
+            }
+        }
+    }
+    
+    /**
+     * Start periodic flight updates from API
+     */
+    private fun startFlightUpdates() {
+        // Fetch immediately
+        flightViewModel.fetchFlights()
+        
+        // Then fetch periodically
+        lifecycleScope.launch {
+            while (true) {
+                delay(FLIGHT_UPDATE_INTERVAL_MS)
+                flightViewModel.fetchFlights()
             }
         }
     }
@@ -248,7 +280,7 @@ class MainActivity : ComponentActivity() {
             val currentLat = location.latitude
             val currentLon = location.longitude
 
-            // 🔥 THIS IS THE RIGHT PLACE 🔥
+            
             flightViewModel.detectNearbyFlights(
                 userLat = currentLat,
                 userLon = currentLon,
